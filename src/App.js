@@ -1,4 +1,10 @@
 import React, { useEffect, useState } from "react";
+import Header from "./components/Header";
+import AddBiddingTeams from "./components/AddBiddingTeams";
+import AvailableTeams from "./components/AvailableTeams";
+import AuctionPanel from "./components/AuctionPanel";
+import Winner from "./components/Winner";
+import History from "./components/History";
 
 const App = () => {
   const BASE_PRICE = 3000;
@@ -194,196 +200,43 @@ const App = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-800 text-slate-100">
-      <header className="sticky top-0 z-20 bg-slate-900/80 backdrop-blur border-b border-slate-800">
-        <div className="container mx-auto flex items-center gap-4 px-4 py-3">
-          <img
-            src="/logos/SPORTIUM-MAIN.jpg"
-            alt="Sportium Logo"
-            className="h-12 w-auto object-contain rounded-md shadow-sm"
-          />
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-amber-400">
-            ASH League Auction
-          </h1>
-        </div>
-      </header>
-
+      <Header title="ASH League Auction" />
       <main className="container mx-auto px-4 py-6 space-y-8">
-        {/* Add Bidding Teams */}
-        <section className="bg-slate-800/50 backdrop-blur rounded-2xl shadow-md ring-1 ring-slate-700 p-5 md:p-6">
-          <h2 className="text-xl md:text-2xl font-semibold">Add Bidding Teams</h2>
-          <div className="mt-4 flex flex-col sm:flex-row gap-3">
-            <input
-              type="text"
-              value={newTeamName}
-              onChange={(e) => setNewTeamName(e.target.value)}
-              placeholder="Enter team name"
-              className="flex-1 rounded-lg border border-slate-700 bg-slate-900/60 px-4 py-2 text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-400/50"
-            />
-            <button
-              onClick={addBiddingTeam}
-              className="inline-flex items-center justify-center rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 px-5 py-2 font-medium text-white shadow hover:from-amber-400 hover:to-orange-400 focus:outline-none focus:ring-2 focus:ring-amber-500/50 active:scale-[0.98]"
-            >
-              Add Team
-            </button>
-          </div>
-          <div className="mt-4">
-            <h3 className="text-lg font-medium">Bidding Teams:</h3>
-            <ul className="mt-2 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-              {biddingTeams.map((team, index) => (
-                <li
-                  key={index}
-                  className="rounded-md bg-slate-900/60 px-3 py-2 text-sm font-medium text-slate-200 ring-1 ring-slate-700"
-                >
-                  {team.name}
-                </li>
-              ))}
-            </ul>
-          </div>
-        </section>
+        <AddBiddingTeams
+          newTeamName={newTeamName}
+          setNewTeamName={setNewTeamName}
+          addBiddingTeam={addBiddingTeam}
+          biddingTeams={biddingTeams}
+        />
 
-        {/* Available Teams */}
         {!currentTeam && (
-          <section>
-            <h2 className="text-xl md:text-2xl font-semibold">Available Teams for Auction:</h2>
-            <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-              {availableTeams.map((team) => (
-                <div
-                  key={team.name}
-                  className="group relative overflow-hidden rounded-xl bg-slate-800/60 shadow ring-1 ring-slate-700 hover:shadow-lg transition-shadow"
-                >
-                  <img src={team.logo} alt={team.name} className="w-full aspect-[4/5] object-cover" />
-                  <div className="p-3 space-y-2">
-                    {team.soldTo ? (
-                      <>
-                        <div className="w-full rounded-lg bg-slate-700 px-4 py-2 text-sm font-medium text-slate-300 text-center">
-                          Sold Out to {team.soldTo}
-                        </div>
-                        <div className="grid grid-cols-2 gap-2">
-                          <button
-                            onClick={() => startAuction(team)}
-                            className="rounded-lg bg-gradient-to-r from-emerald-500 to-teal-500 px-3 py-2 text-sm font-semibold text-white shadow hover:from-emerald-400 hover:to-teal-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
-                          >
-                            Re-Auction
-                          </button>
-                          <button
-                            onClick={() => {
-                              setAvailableTeams((prev) =>
-                                prev.map((t) => (t.name === team.name ? { ...t, soldTo: undefined } : t))
-                              );
-                            }}
-                            className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm font-semibold text-slate-200 shadow hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-500/50"
-                          >
-                            Reset
-                          </button>
-                        </div>
-                      </>
-                    ) : (
-                      <button
-                        onClick={() => startAuction(team)}
-                        className="w-full rounded-lg bg-gradient-to-r from-emerald-500 to-teal-500 px-4 py-2 text-sm font-semibold text-white shadow hover:from-emerald-400 hover:to-teal-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
-                      >
-                        Start Auction for {team.name}
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
+          <AvailableTeams
+            availableTeams={availableTeams}
+            startAuction={startAuction}
+            resetTeam={(name) =>
+              setAvailableTeams((prev) => prev.map((t) => (t.name === name ? { ...t, soldTo: undefined } : t)))
+            }
+          />
         )}
 
-        {/* Auction In Progress */}
-        {currentTeam && (
-          <section className="bg-slate-800/60 rounded-2xl p-6 shadow ring-1 ring-slate-700">
-            <h2 className="text-2xl font-semibold">Bidding for: {currentTeam?.name}</h2>
-            <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-              <div className="flex justify-center">
-                <img
-                  src={currentTeam.logo}
-                  alt={currentTeam.name}
-                  className="h-64 w-auto rounded-xl shadow"
-                />
-              </div>
-              <div>
-                <p className="text-xl font-medium">Current Bid: ₹{biddingAmount}</p>
+        <AuctionPanel
+          currentTeam={currentTeam}
+          biddingAmount={biddingAmount}
+          currentBiddingTeam={currentBiddingTeam}
+          biddingTeams={biddingTeams}
+          placeBid={placeBid}
+          reverseLastBid={reverseLastBid}
+          resetToBase={() => {
+            setBiddingAmount(BASE_PRICE);
+            setBiddingLog([]);
+            setCurrentBiddingTeam(null);
+            setIsFirstBid(true);
+          }}
+          endAuction={endAuction}
+        />
 
-                {/* Display current bidding team */}
-                {currentBiddingTeam && (
-                  <div className="mt-2 rounded-lg bg-slate-900/60 px-4 py-2 text-slate-200 ring-1 ring-slate-700">
-                    Current Bidding Team: {currentBiddingTeam}
-                  </div>
-                )}
-
-                <div className="mt-4 flex flex-wrap gap-3">
-                  {biddingTeams.map((team, index) => (
-                    <button
-                      key={index}
-                      onClick={() => placeBid(team.name)}
-                      className="rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 px-4 py-2 text-sm font-semibold text-white shadow hover:from-amber-400 hover:to-orange-400 focus:outline-none focus:ring-2 focus:ring-amber-500/50"
-                    >
-                      {team.name} Bid
-                    </button>
-                  ))}
-                </div>
-                <div className="mt-6 flex flex-wrap gap-3">
-                  <button
-                    onClick={() => {
-                      setBiddingAmount(BASE_PRICE);
-                      setBiddingLog([]);
-                      setCurrentBiddingTeam(null);
-                      setIsFirstBid(true);
-                    }}
-                    className="inline-flex items-center justify-center rounded-lg border border-slate-600 bg-slate-800 px-5 py-2.5 font-semibold text-slate-200 shadow hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-500/50"
-                  >
-                    Reset To Base
-                  </button>
-                  <button
-                    onClick={reverseLastBid}
-                    className="inline-flex items-center justify-center rounded-lg border border-slate-600 bg-slate-800 px-5 py-2.5 font-semibold text-slate-200 shadow hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-500/50"
-                  >
-                    Reverse Bid
-                  </button>
-                  <button
-                    onClick={endAuction}
-                    className="inline-flex items-center justify-center rounded-lg bg-gradient-to-r from-rose-500 to-red-600 px-5 py-2.5 font-semibold text-white shadow hover:from-rose-400 hover:to-red-500 focus:outline-none focus:ring-2 focus:ring-rose-500/50"
-                  >
-                    End Auction
-                  </button>
-                </div>
-              </div>
-            </div>
-          </section>
-        )}
-
-        {/* Auction Winner */}
-        {winner && (
-          <section className="rounded-2xl bg-slate-800/60 p-6 shadow ring-1 ring-slate-700">
-            <h2 className="text-2xl font-semibold">Auction Winner:</h2>
-            <p className="mt-2 text-lg">
-              <strong>{winner.teamName}</strong> won the auction for {" "}
-              <strong>{currentTeam?.name}</strong> with a bid of ₹{winner.amount}.
-            </p>
-          </section>
-        )}
-
-        {/* Bidding History */}
-        {Object.keys(history).length > 0 && (
-          <section className="rounded-2xl bg-slate-800/50 p-6 shadow ring-1 ring-slate-700">
-            <h2 className="text-2xl font-semibold">Bidding History:</h2>
-            <ul className="mt-3 space-y-3">
-              {Object.entries(history).map(([teamName, records]) => (
-                <li key={teamName} className="rounded-lg bg-slate-900/60 p-4 ring-1 ring-slate-700">
-                  <strong className="text-amber-300">{teamName}</strong> won:
-                  <ul className="mt-2 list-disc list-inside text-slate-200">
-                    {records.map((record, index) => (
-                      <li key={index}>{record.team} for ₹{record.amount}</li>
-                    ))}
-                  </ul>
-                </li>
-              ))}
-            </ul>
-          </section>
-        )}
+        <Winner winner={winner} currentTeam={currentTeam} />
+        <History history={history} />
       </main>
     </div>
   );
