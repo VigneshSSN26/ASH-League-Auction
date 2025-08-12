@@ -1,6 +1,10 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 
 const App = () => {
+  const BASE_PRICE = 3000;
+  const BID_INCREMENT = 1000;
+  const STORAGE_KEY = "ash-auction-state-v1";
+
   const teams = [
     { name: "CT Night Riders", logo: "/logos/CT Night Riders Poster.png" },
     { name: "Fountain Sharks", logo: "/logos/Fountain Sharks Poster.png" },
@@ -13,12 +17,70 @@ const App = () => {
   const [biddingTeams, setBiddingTeams] = useState([]);
   const [biddingLog, setBiddingLog] = useState([]);
   const [currentTeam, setCurrentTeam] = useState(null);
-  const [biddingAmount, setBiddingAmount] = useState(3000);
+  const [biddingAmount, setBiddingAmount] = useState(BASE_PRICE);
   const [history, setHistory] = useState({});
   const [newTeamName, setNewTeamName] = useState("");
   const [winner, setWinner] = useState(null);
-  const [isFirstBid, setIsFirstBid] = useState(true); // Track if it's the first bid
+  const [isFirstBid, setIsFirstBid] = useState(true);
   const [currentBiddingTeam, setCurrentBiddingTeam] = useState(null); // Track the current bidding team
+  const [isHydrated, setIsHydrated] = useState(false);
+
+  // Load saved state on mount
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const saved = JSON.parse(raw);
+        if (saved.availableTeams) setAvailableTeams(saved.availableTeams);
+        if (saved.biddingTeams) setBiddingTeams(saved.biddingTeams);
+        if (saved.biddingLog) setBiddingLog(saved.biddingLog);
+        if (Object.prototype.hasOwnProperty.call(saved, "currentTeam")) setCurrentTeam(saved.currentTeam);
+        if (Object.prototype.hasOwnProperty.call(saved, "biddingAmount")) setBiddingAmount(saved.biddingAmount);
+        if (saved.history) setHistory(saved.history);
+        if (Object.prototype.hasOwnProperty.call(saved, "winner")) setWinner(saved.winner);
+        if (Object.prototype.hasOwnProperty.call(saved, "isFirstBid")) setIsFirstBid(saved.isFirstBid);
+        if (Object.prototype.hasOwnProperty.call(saved, "currentBiddingTeam")) setCurrentBiddingTeam(saved.currentBiddingTeam);
+      }
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error("Failed to load saved auction state", error);
+    } finally {
+      setIsHydrated(true);
+    }
+  }, []);
+
+  // Persist state after hydration
+  useEffect(() => {
+    if (!isHydrated) return;
+    const snapshot = {
+      availableTeams,
+      biddingTeams,
+      biddingLog,
+      currentTeam,
+      biddingAmount,
+      history,
+      winner,
+      isFirstBid,
+      currentBiddingTeam,
+    };
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot));
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error("Failed to save auction state", error);
+    }
+  }, [
+    isHydrated,
+    availableTeams,
+    biddingTeams,
+    biddingLog,
+    currentTeam,
+    biddingAmount,
+    history,
+    winner,
+    isFirstBid,
+    currentBiddingTeam,
+  ]);
 
   const addBiddingTeam = () => {
     if (newTeamName.trim() === "") {
@@ -31,11 +93,11 @@ const App = () => {
 
   const startAuction = (team) => {
     setCurrentTeam(team);
-    setBiddingAmount(3000); // Set base price at the start of the auction
+    setBiddingAmount(BASE_PRICE); // Reset to base price
     setBiddingLog([]);
     setWinner(null);
-    setIsFirstBid(true); // Reset for new auction
-    setCurrentBiddingTeam(null); // Clear the previous bidding team
+    setIsFirstBid(true);
+    setCurrentBiddingTeam(null);
   };
 
   const placeBid = (teamName) => {
@@ -44,21 +106,34 @@ const App = () => {
       return; // Prevent the same team from bidding again
     }
 
-    let increment = 200; // Default increment for the first bid
-
-    // After the first bid, set increment to 500 or 200 depending on amount
-    if (!isFirstBid) {
-      increment = biddingAmount >= 6000 ? 500 : 200;
-    }else{
-    increment=0; // Set the initial base price
+    const nextAmount = biddingAmount + BID_INCREMENT; // Always increment by 1000
+    setBiddingAmount(nextAmount);
     setIsFirstBid(false);
-  }
+    setCurrentBiddingTeam(teamName);
+    setBiddingLog((prev) => [...prev, { teamName, amount: nextAmount }]);
+  };
 
-
-    setBiddingAmount((prev) => prev + increment);
-    setIsFirstBid(false); // Mark that the first bid is placed
-    setCurrentBiddingTeam(teamName); // Set the current bidding team
-    setBiddingLog((prev) => [...prev, { teamName, amount: biddingAmount }]);
+  const reverseLastBid = () => {
+    if (!currentTeam) return;
+    if (biddingLog.length === 0) {
+      // Reset to base price if no bids to undo
+      setBiddingAmount(BASE_PRICE);
+      setCurrentBiddingTeam(null);
+      setIsFirstBid(true);
+      return;
+    }
+    const updatedLog = biddingLog.slice(0, -1);
+    const lastEntry = updatedLog[updatedLog.length - 1] || null;
+    setBiddingLog(updatedLog);
+    if (lastEntry) {
+      setBiddingAmount(lastEntry.amount);
+      setCurrentBiddingTeam(lastEntry.teamName);
+      setIsFirstBid(false);
+    } else {
+      setBiddingAmount(BASE_PRICE);
+      setCurrentBiddingTeam(null);
+      setIsFirstBid(true);
+    }
   };
 
   const endAuction = () => {
@@ -115,6 +190,10 @@ const App = () => {
   
     // Reset current team
     setCurrentTeam(null);
+    setBiddingLog([]);
+    setBiddingAmount(BASE_PRICE);
+    setCurrentBiddingTeam(null);
+    setIsFirstBid(true);
   };
 
   return (
@@ -234,12 +313,20 @@ const App = () => {
                     </button>
                   ))}
                 </div>
-                <button
-                  onClick={endAuction}
-                  className="mt-6 inline-flex items-center justify-center rounded-lg bg-gradient-to-r from-rose-500 to-red-600 px-5 py-2.5 font-semibold text-white shadow hover:from-rose-400 hover:to-red-500 focus:outline-none focus:ring-2 focus:ring-rose-500/50"
-                >
-                  End Auction
-                </button>
+                <div className="mt-6 flex flex-wrap gap-3">
+                  <button
+                    onClick={reverseLastBid}
+                    className="inline-flex items-center justify-center rounded-lg border border-slate-600 bg-slate-800 px-5 py-2.5 font-semibold text-slate-200 shadow hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-500/50"
+                  >
+                    Reverse Bid
+                  </button>
+                  <button
+                    onClick={endAuction}
+                    className="inline-flex items-center justify-center rounded-lg bg-gradient-to-r from-rose-500 to-red-600 px-5 py-2.5 font-semibold text-white shadow hover:from-rose-400 hover:to-red-500 focus:outline-none focus:ring-2 focus:ring-rose-500/50"
+                  >
+                    End Auction
+                  </button>
+                </div>
               </div>
             </div>
           </section>
